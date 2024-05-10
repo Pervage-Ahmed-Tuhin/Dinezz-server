@@ -1,6 +1,6 @@
 const express = require('express');
 const cors = require('cors');
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const jwt = require('jsonwebtoken');
 const cookieParser = require('cookie-parser');
 
@@ -14,7 +14,7 @@ const port = process.env.PORT || 5000;
 app.use(cors(
     {
         origin: [
-            'http://localhost:5173'
+            'http://localhost:5174'
         ],
         credentials: true
     }
@@ -58,6 +58,25 @@ async function run() {
             }
         })
 
+        app.get('/featuredFood/:id', async (req, res) => {
+            const id = req.params.id;
+            console.log(id);
+            const query = { _id: new ObjectId(id) };
+            const result = await featuredFoodCollection.findOne(query);
+            res.send(result);
+        })
+
+        app.get('/requestedFood', async (req, res) => {
+            try {
+                const cursor = featuredFoodCollection.find({ foodStatus: "requested" });
+                const result = await cursor.toArray();
+                res.json(result);
+            } catch (error) {
+                console.error(error);
+                res.status(500).json({ message: 'Internal server error' });
+            }
+        })
+
         app.post('/addedFood', async (req, res) => {
             try {
                 const newFood = req.body;
@@ -70,6 +89,28 @@ async function run() {
             }
         })
 
+        app.put('/requestFood/:id', async (req, res) => {
+            const id = req.params.id;
+            const filter = { _id: new ObjectId(id) };
+            const pop = req.body;
+            const updateDoc = {
+                $set: {
+                    foodStatus: "requested",
+                    requestDate: pop.requestDate,
+                    additionalNotes: pop.additionalNotes,
+                    
+
+                }
+            };
+
+            try {
+                const result = await featuredFoodCollection.updateOne(filter, updateDoc);
+                res.json(result);
+            } catch (error) {
+                console.error(error);
+                res.status(500).json({ message: 'Internal server error' });
+            }
+        });
 
 
 
