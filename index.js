@@ -47,11 +47,15 @@ async function run() {
 
 
         const featuredFoodCollection = client.db('featured').collection('food');
-
         app.get('/featuredFood', async (req, res) => {
-            const cursor = featuredFoodCollection.find();
-            const result = await cursor.toArray();
-            res.send(result);
+            try {
+                const cursor = featuredFoodCollection.find({ foodStatus: "available" });
+                const result = await cursor.toArray();
+                res.json(result);
+            } catch (error) {
+                console.error(error);
+                res.status(500).json({ message: 'Internal server error' });
+            }
         })
 
         app.post('/addedFood', async (req, res) => {
