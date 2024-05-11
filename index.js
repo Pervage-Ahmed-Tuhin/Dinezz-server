@@ -14,7 +14,10 @@ const port = process.env.PORT || 5000;
 app.use(cors(
     {
         origin: [
-            'http://localhost:5175'
+
+            'https://food-sharing-84884.web.app',
+            'https://food-sharing-84884.firebaseapp.com',
+
         ],
         credentials: true
     }
@@ -258,7 +261,7 @@ async function run() {
 
 
 
-        await client.db("admin").command({ ping: 1 });
+        // await client.db("admin").command({ ping: 1 });
         console.log("Pinged your deployment. You successfully connected to MongoDB!");
     } finally {
         // Ensures that the client will close when you finish/error
