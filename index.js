@@ -14,11 +14,14 @@ const port = process.env.PORT || 5000;
 app.use(cors(
     {
         origin: [
-            'http://localhost:5174'
+            'http://localhost:5175'
         ],
         credentials: true
     }
 ))
+
+
+
 
 app.use(express.json());
 app.use(cookieParser());
@@ -41,8 +44,57 @@ const client = new MongoClient(uri, {
     }
 });
 
+
+//middlewares
+const verifyToken = (req, res, next) => {
+    const token = req?.cookies?.token;
+    // console.log('token in the middleware', token);
+    // no token available 
+    if (!token) {
+        return res.status(401).send({ message: 'unauthorized access' })
+    }
+    jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+        if (err) {
+            return res.status(401).send({ message: 'unauthorized access' })
+        }
+        req.user = decoded;
+        next();
+    })
+}
+
+
+
+
 async function run() {
     try {
+
+
+        // auth related api
+
+        app.post('/jwt', async (req, res) => {
+            const user = req.body;
+            console.log('user for token', user);
+            const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' });
+
+            res.cookie('token', token, {
+                httpOnly: true,
+                secure: true,
+                sameSite: 'none'
+            })
+                .send({ success: true });
+        })
+
+
+        app.post('/logout', async (req, res) => {
+            const user = req.body;
+            console.log('logging out', user);
+            res.clearCookie('token', { maxAge: 0 }).send({ success: true })
+        })
+
+
+
+
+        // auth related api end
 
 
 
@@ -66,16 +118,34 @@ async function run() {
             res.send(result);
         })
 
-        app.get('/requestedFood', async (req, res) => {
+        // app.get('/requestedFood', async (req, res) => {
+        //     try {
+        //         console.log(req.query.email)
+        //         const cursor = featuredFoodCollection.find({ foodStatus: "requested" });
+        //         const result = await cursor.toArray();
+        //         res.json(result);
+        //     } catch (error) {
+        //         console.error(error);
+        //         res.status(500).json({ message: 'Internal server error' });
+        //     }
+        // })
+        app.get('/requestedFood', verifyToken, async (req, res) => {
             try {
-                const cursor = featuredFoodCollection.find({ foodStatus: "requested" });
+                const userEmail = req.user.email; // Extract user email from verified token
+                if (req.user.email !== req.query.email) {
+                    return res.status(403).send({ message: 'forbidden access' })
+                }
+                const cursor = featuredFoodCollection.find({
+                    foodStatus: "requested",
+                    userEmail // Show only requested items of the logged-in user
+                });
                 const result = await cursor.toArray();
                 res.json(result);
             } catch (error) {
                 console.error(error);
                 res.status(500).json({ message: 'Internal server error' });
             }
-        })
+        });
 
         app.post('/addedFood', async (req, res) => {
             try {
@@ -98,7 +168,9 @@ async function run() {
                     foodStatus: "requested",
                     requestDate: pop.requestDate,
                     additionalNotes: pop.additionalNotes,
-                    
+                    userEmail: pop.userEmail,
+                    userName: pop.userName
+
 
                 }
             };
