@@ -147,7 +147,7 @@ async function run() {
             }
         });
 
-       
+
         app.get('/manageFood', verifyToken, async (req, res) => {
             try {
                 const donorEmail = req.query.email; // Extract donor email from query parameters
@@ -245,6 +245,13 @@ async function run() {
                 console.error(error);
                 res.status(500).json({ message: 'Internal server error' });
             }
+        })
+
+        app.delete('/delete/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) };
+            const result = await featuredFoodCollection.deleteOne(query);
+            res.send(result);
         })
 
 
