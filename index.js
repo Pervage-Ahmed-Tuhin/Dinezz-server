@@ -147,6 +147,33 @@ async function run() {
             }
         });
 
+       
+        app.get('/manageFood', verifyToken, async (req, res) => {
+            try {
+                const donorEmail = req.query.email; // Extract donor email from query parameters
+                if (!donorEmail || donorEmail !== req.user.email) {
+                    return res.status(403).json({ message: 'Forbidden access' });
+                }
+                const cursor = featuredFoodCollection.find({ 'donator.email': donorEmail });
+                const result = await cursor.toArray();
+                res.json(result);
+            } catch (error) {
+                console.error(error);
+                res.status(500).json({ message: 'Internal server error' });
+            }
+        });
+
+
+
+        app.get('/updateFood/:id', async (req, res) => {
+            const id = req.params.id;
+            console.log(id);
+            const query = { _id: new ObjectId(id) };
+            const result = await featuredFoodCollection.findOne(query);
+            res.send(result);
+
+        })
+
         app.post('/addedFood', async (req, res) => {
             try {
                 const newFood = req.body;
@@ -183,6 +210,42 @@ async function run() {
                 res.status(500).json({ message: 'Internal server error' });
             }
         });
+
+        app.put('/manageUpdateFood/:id', verifyToken, async (req, res) => {
+            const id = req.params.id;
+
+            console.log(req.body);
+            const userEmailFromBody = req.body.UserEmail;
+            const userEmailFromToken = req.user.email;
+
+
+            if (userEmailFromToken !== userEmailFromBody) {
+                return res.status(403).json({ message: 'Forbidden access' });
+            }
+            const filter = { _id: new ObjectId(id) };
+            const pop = req.body;
+
+            const updatedFood = {
+                $set: {
+                    foodImage: pop.foodImage,
+                    foodName: pop.foodName,
+                    foodQuantity: pop.foodQuantity,
+                    pickupLocation: pop.pickupLocation,
+                    expiredDateTime: pop.expiredDateTime,
+                    additionalNotes: pop.additionalNotes,
+                    foodStatus: pop.foodStatus,
+
+
+                }
+            };
+            try {
+                const result = await featuredFoodCollection.updateOne(filter, updatedFood);
+                res.json(result);
+            } catch (error) {
+                console.error(error);
+                res.status(500).json({ message: 'Internal server error' });
+            }
+        })
 
 
 
